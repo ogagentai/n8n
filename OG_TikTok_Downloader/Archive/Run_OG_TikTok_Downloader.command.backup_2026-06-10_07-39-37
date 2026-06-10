@@ -18,9 +18,6 @@ set -o pipefail
 PROFILE_URL="https://www.tiktok.com/@oghonim"
 PROFILE_HANDLE="oghonim"
 
-# Build marker — so you can confirm you are running the REPAIRED version.
-BUILD_VERSION="2026-06-10c (bash 3.2-safe; pkg/cookies fixes)"
-
 # --- Locate the project folder = the folder THIS file lives in. -------------
 #     (So everything stays self-contained, ideally at ~/OG_TikTok_Downloader)
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -90,7 +87,6 @@ say "${B}========================================================${R}"
 say "${DIM}Project folder: $PROJECT_DIR${R}"
 say "${DIM}This run's log:  $LOG${R}"
 say "${DIM}Start time:      $(date)${R}"
-say "${DIM}Build:           $BUILD_VERSION${R}"
 
 # =============================================================================
 #  STEP 1 — INSPECT (look, don't change anything yet)
@@ -485,7 +481,7 @@ ENUM_ERR="$LOGS_DIR/.enum_err_${RUN_STAMP}.txt"
 enumerate() {
   # List video IDs only (no download). Writes IDs to $IDS_FILE. Returns yt-dlp exit code.
   : > "$IDS_FILE"
-  $YTDLP "${COMMON_OPTS[@]}" ${COOKIE_OPTS[@]+"${COOKIE_OPTS[@]}"} \
+  $YTDLP "${COMMON_OPTS[@]}" "${COOKIE_OPTS[@]}" \
     --flat-playlist --print "%(id)s" \
     "$PROFILE_URL" > "$IDS_FILE" 2> "$ENUM_ERR"
   return $?
@@ -505,32 +501,6 @@ if [ "$ENUM_CODE" -ne 0 ] || [ "$N_DETECTED" -eq 0 ]; then
     enumerate
     ENUM_CODE=$?
     N_DETECTED=$(grep -c . "$IDS_FILE" 2>/dev/null || echo 0)
-  fi
-fi
-
-# Last-resort fallback that yt-dlp itself recommends for TikTok profiles:
-# read the stable channel_id from ONE of your video links, then list the
-# whole account via "tiktokuser:<channel_id>". Fully optional and skippable.
-ONE_VIDEO_URL=""
-CHANNEL_ID=""
-if { [ "$ENUM_CODE" -ne 0 ] || [ "$N_DETECTED" -eq 0 ]; } && [ -t 0 ]; then
-  say ""
-  say "${B}One more safe option:${R} open TikTok, tap any one of YOUR videos,"
-  say "choose Share ▸ Copy Link, and paste it here (or press Return to skip)."
-  printf "%sPaste one video link (or Return to skip): %s" "$B" "$R"
-  read -r ONE_VIDEO_URL
-  if [ -n "$ONE_VIDEO_URL" ]; then
-    say "Reading the channel id from that video (kept private)…"
-    CHANNEL_ID="$($YTDLP ${COOKIE_OPTS[@]+"${COOKIE_OPTS[@]}"} --no-warnings --print "%(channel_id)s" "$ONE_VIDEO_URL" 2>>"$ENUM_ERR" | grep -m1 . || true)"
-    if [ -n "$CHANNEL_ID" ] && [ "$CHANNEL_ID" != "NA" ]; then
-      ok "Got the channel id. Listing the whole account this way…"
-      PROFILE_URL="tiktokuser:$CHANNEL_ID"
-      enumerate
-      ENUM_CODE=$?
-      N_DETECTED=$(grep -c . "$IDS_FILE" 2>/dev/null || echo 0)
-    else
-      warn "Could not read a channel id from that link — moving on."
-    fi
   fi
 fi
 
@@ -562,7 +532,7 @@ say "Test video id: $FIRST_ID"
 # --- Download ONLY the first video as a test. -------------------------------
 say "Downloading ONE test video…"
 TEST_URL="https://www.tiktok.com/@${PROFILE_HANDLE}/video/${FIRST_ID}"
-$YTDLP "${COMMON_OPTS[@]}" ${COOKIE_OPTS[@]+"${COOKIE_OPTS[@]}"} "${DL_OPTS[@]}" "$TEST_URL" || true
+$YTDLP "${COMMON_OPTS[@]}" "${COOKIE_OPTS[@]}" "${DL_OPTS[@]}" "$TEST_URL" || true
 
 # --- Verify the test download for real. -------------------------------------
 verify_video() {
@@ -637,7 +607,7 @@ done < "$IDS_FILE"
 
 say "Archiving all public videos from @$PROFILE_HANDLE (already-downloaded ones are skipped)…"
 # -i / --ignore-errors: keep going past any single bad video.
-$YTDLP "${COMMON_OPTS[@]}" ${COOKIE_OPTS[@]+"${COOKIE_OPTS[@]}"} "${DL_OPTS[@]}" \
+$YTDLP "${COMMON_OPTS[@]}" "${COOKIE_OPTS[@]}" "${DL_OPTS[@]}" \
   --ignore-errors \
   "$PROFILE_URL" || true
 
