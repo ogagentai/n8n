@@ -14,7 +14,7 @@ else B=""; R=""; G=""; Y=""; RED=""; D=""; fi
 OUT="$HOME/Desktop/TikTok_Videos"
 mkdir -p "$OUT"
 ERRLOG="$OUT/.last_error.txt"
-BUILD="2026-06-11b (impersonate fix)"
+BUILD="2026-06-11c (audio fix)"
 
 trap 'echo; echo "${Y}تم الإيقاف. الفيديوهات المحمّلة محفوظة في $OUT${R}"; exit 0' INT
 trap 'echo; if [ -t 0 ]; then printf "%sاضغط Return لقفل الويندو…%s " "$D" "$R"; read -r _ || true; fi' EXIT
@@ -70,7 +70,8 @@ echo "${G}✅ الأدوات جاهزة — yt-dlp $($YTDLP --version 2>/dev/nul
 # --- تحميل فيديو واحد: يجرّب أفضل الطرق بالترتيب، ويقف عند أول نجاح --------------
 download_one() {
   local url="$1"
-  local base=(-f "bv*+ba/b" --merge-output-format mp4 --remux-video mp4
+  local base=(-f "best[acodec!=none][vcodec!=none]/bv*+ba/b"
+              --merge-output-format mp4 --remux-video mp4 --force-overwrites
               --no-playlist --restrict-filenames --no-warnings --no-progress
               --retries 3 --fragment-retries 3
               -o "$OUT/%(uploader)s_%(id)s.%(ext)s")

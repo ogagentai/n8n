@@ -399,7 +399,7 @@ COMMON_OPTS=(
 # What and where to download. --paths keeps metadata/thumbnails cleanly separated
 # WITHOUT touching the output template (safe approach the task asked for).
 DL_OPTS=(
-  -f "bv*+ba/b"
+  -f "best[acodec!=none][vcodec!=none]/bv*+ba/b"
   -S "res,ext:mp4:m4a,vcodec:h264"
   --merge-output-format mp4
   --remux-video mp4
