@@ -1,0 +1,162 @@
+{
+  "name": "Instagram Video → Script",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Instagram → Script",
+        "formDescription": "الصق رابط فيديو إنستجرام (Reel / Post) عشان نحوّله لسكريبت مكتوب",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Instagram URL",
+              "placeholder": "https://www.instagram.com/reel/XXXXXXXXX/",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Instagram URL Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 300],
+      "webhookId": "instagram-video-to-script"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://instagram-scraper-api2.p.rapidapi.com/v1/post_info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "instagram-scraper-api2.p.rapidapi.com"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "code_or_id_or_url",
+              "value": "={{ $json['Instagram URL'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": "Get Direct Video URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "notes": "Replace this endpoint/credential with the Instagram downloader API you use. The Code node after it tries to read the direct video URL from several common response shapes."
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// يحاول يطلع الرابط المباشر للفيديو من أشكال مختلفة لردود الـ API\nconst data = $input.first().json;\n\nfunction deepFind(obj, keys) {\n  if (obj == null || typeof obj !== 'object') return undefined;\n  for (const k of Object.keys(obj)) {\n    if (keys.includes(k) && typeof obj[k] === 'string' && obj[k].startsWith('http')) {\n      return obj[k];\n    }\n  }\n  for (const k of Object.keys(obj)) {\n    const found = deepFind(obj[k], keys);\n    if (found) return found;\n  }\n  return undefined;\n}\n\nconst candidateKeys = [\n  'video_url', 'videoUrl', 'video', 'download_url', 'downloadUrl',\n  'play', 'url', 'media', 'hd', 'sd'\n];\n\nconst videoUrl = deepFind(data, candidateKeys);\n\nif (!videoUrl) {\n  throw new Error('مالقيتش رابط فيديو مباشر في رد الـ API. افتح node \"Get Direct Video URL\" وشوف شكل الـ JSON وعدّل candidateKeys.');\n}\n\nreturn [{ json: { videoUrl } }];"
+      },
+      "id": "33333333-3333-4333-8333-333333333333",
+      "name": "Extract Video URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.videoUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "44444444-4444-4444-8444-444444444444",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "55555555-5555-4555-8555-555555555555",
+      "name": "Transcribe (Whisper)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [960, 300],
+      "notes": "Whisper يقبل ملفات mp4 مباشرة ويستخرج الصوت. ضيف language=ar في Options لو الفيديو عربي عشان دقة أعلى."
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "أنت كاتب سكريبتات محترف. مهمتك تحوّل النص المفرّغ من فيديو إلى سكريبت مرتّب وواضح بنفس لغة النص. رتّب السكريبت على شكل: عنوان مقترح (Hook)، ثم الفقرات الأساسية بنقاط واضحة، ثم خاتمة / Call to action لو موجودة. صحّح أي أخطاء تفريغ بسيطة من غير ما تغيّر المعنى.",
+              "role": "system"
+            },
+            {
+              "content": "=النص المفرّغ من الفيديو:\n\n{{ $json.text }}",
+              "role": "user"
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {}
+      },
+      "id": "66666666-6666-4666-8666-666666666666",
+      "name": "Generate Script",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1200, 300],
+      "notes": "اللي بيطلع هنا في حقل message.content هو السكريبت النهائي."
+    }
+  ],
+  "connections": {
+    "Instagram URL Form": {
+      "main": [[{ "node": "Get Direct Video URL", "type": "main", "index": 0 }]]
+    },
+    "Get Direct Video URL": {
+      "main": [[{ "node": "Extract Video URL", "type": "main", "index": 0 }]]
+    },
+    "Extract Video URL": {
+      "main": [[{ "node": "Download Video", "type": "main", "index": 0 }]]
+    },
+    "Download Video": {
+      "main": [[{ "node": "Transcribe (Whisper)", "type": "main", "index": 0 }]]
+    },
+    "Transcribe (Whisper)": {
+      "main": [[{ "node": "Generate Script", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templatecredsSetupCompleted": false
+  },
+  "tags": [
+    { "name": "instagram" },
+    { "name": "ai" },
+    { "name": "transcription" }
+  ]
+}
