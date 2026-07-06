@@ -1,4 +1,35 @@
-# video_to_script — أداة ترمينال لتحويل الفيديو لسكريبت
+# أدوات فيديو من الترمينال
+
+- **`download.py`** — تنزيل الفيديو بس (Instagram / TikTok / YouTube).
+- **`video_to_script.py`** — تنزيل + تفريغ + ترتيب سكريبت (اختياري، موثّق تحت).
+
+---
+
+## download.py — أداة التنزيل
+
+```bash
+# رابط واحد
+python3 download.py "https://www.instagram.com/reel/XXXX/"
+
+# مجلد حفظ مخصّص
+python3 download.py "<url>" -o downloads/
+
+# الصوت بس كـ mp3 (يحتاج ffmpeg)
+python3 download.py "<url>" --audio
+
+# أكتر من رابط مرة واحدة
+python3 download.py "<url1>" "<url2>" "<url3>"
+
+# فيديو خاص محتاج لوجين — استخدم كوكيز المتصفح
+python3 download.py "<url>" --cookies-from chrome
+```
+
+- لو `yt-dlp` مش متسطّب، الأداة بتسطّبه لوحدها أول مرة.
+- الفيديو بيتحفظ افتراضياً في مجلد `downloads/`، والأداة بتطبع مسار الملف.
+
+---
+
+## video_to_script — أداة ترمينال لتحويل الفيديو لسكريبت
 
 سكريبت واحد بيشتغل من الترمينال مباشرة (من غير n8n).
 بياخد رابط فيديو من **إنستجرام / تيك توك / يوتيوب** ويطلّعه سكريبت مكتوب.
